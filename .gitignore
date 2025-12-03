@@ -1,0 +1,30 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+.env
+
+# --- Virtual env ---
+venv/
+ENV/
+env/
+
+# --- Docker ---
+# Volúmenes y data generada por contenedores
+mysql-data/
+db_data/
+*.sql
+
+# --- Logs ---
+*.log
+
+# --- IDE ---
+.vscode/
+.idea/
+
+# --- Sistema operativo ---
+.DS_Store
+Thumbs.db

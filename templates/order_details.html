@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle de Órdenes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .table-action-col { width: 150px; }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <h1 class="text-center mb-4 text-info">Gestión de Detalles de Órdenes 📋</h1>
+
+    <div class="text-end mb-3">
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#orderDetailModal" onclick="openAddModal()">
+            <i class="bi bi-plus-circle"></i> Agregar Detalle
+        </button>
+    </div>
+
+    <div class="card p-4 shadow">
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped table-hover align-middle" id="orderDetailsTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID Detalle</th>
+                        <th>ID Orden</th>
+                        <th>ID Servicio</th>
+                        <th>ID Producto</th>
+                        <th>Subtotal</th>
+                        <th class="text-center table-action-col">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="orderDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="orderDetailForm">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="modalTitle"></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="detailId">
+                    <div class="mb-3">
+                        <label for="Detail_ID" class="form-label">ID Detalle</label>
+                        <input type="text" id="Detail_ID" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="Order_ID" class="form-label">ID Orden</label>
+                        <input type="text" id="Order_ID" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="Service_ID" class="form-label">ID Servicio</label>
+                        <input type="text" id="Service_ID" class="form-control">
+                        <small class="form-text text-muted">Opcional si hay Producto</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="Product_ID" class="form-label">ID Producto</label>
+                        <input type="text" id="Product_ID" class="form-control">
+                        <small class="form-text text-muted">Opcional si hay Servicio</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="Subtotal" class="form-label">Subtotal</label>
+                        <input type="number" step="0.01" id="Subtotal" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-info text-white" id="saveBtn">Guardar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const API_URL = "/order_details";
+    let editingId = null;
+
+    async function loadOrderDetails() {
+        try {
+            const res = await fetch(API_URL);
+            if (!res.ok) throw new Error('Error al cargar datos');
+            const data = await res.json();
+            const tbody = document.querySelector("#orderDetailsTable tbody");
+            tbody.innerHTML = "";
+            data.forEach(d => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${d.Detail_ID}</td>
+                    <td>${d.Order_ID}</td>
+                    <td>${d.Service_ID || '-'}</td>
+                    <td>${d.Product_ID || '-'}</td>
+                    <td>$${d.Subtotal}</td>
+                    <td class="text-center">
+                        <button class="btn btn-warning btn-sm me-2" onclick="openEditModal('${d.Detail_ID}')">Editar</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteOrderDetail('${d.Detail_ID}')">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (error) {
+            console.error(error);
+            alert("Error al cargar los detalles de órdenes.");
+        }
+    }
+
+    function openAddModal() {
+        editingId = null;
+        document.getElementById("modalTitle").innerText = "Agregar Detalle de Orden";
+        document.getElementById("orderDetailForm").reset();
+        document.getElementById("Detail_ID").disabled = false;
+    }
+
+    async function openEditModal(id) {
+        editingId = id;
+        try {
+            const res = await fetch(`${API_URL}/${id}`);
+            if (!res.ok) throw new Error('Detalle no encontrado');
+            const data = await res.json();
+            document.getElementById("modalTitle").innerText = "Editar Detalle de Orden";
+            document.getElementById("Detail_ID").value = data.Detail_ID;
+            document.getElementById("Detail_ID").disabled = true;
+            document.getElementById("Order_ID").value = data.Order_ID;
+            document.getElementById("Service_ID").value = data.Service_ID || '';
+            document.getElementById("Product_ID").value = data.Product_ID || '';
+            document.getElementById("Subtotal").value = parseFloat(data.Subtotal);
+            new bootstrap.Modal(document.getElementById('orderDetailModal')).show();
+        } catch (error) {
+            console.error(error);
+            alert("Error al cargar los datos del detalle.");
+        }
+    }
+
+    document.getElementById("orderDetailForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const modalElement = document.getElementById('orderDetailModal');
+        const data = {
+            Detail_ID: document.getElementById("Detail_ID").value,
+            Order_ID: document.getElementById("Order_ID").value,
+            Service_ID: document.getElementById("Service_ID").value || null,
+            Product_ID: document.getElementById("Product_ID").value || null,
+            Subtotal: parseFloat(document.getElementById("Subtotal").value)
+        };
+
+        if(editingId) {
+            delete data.Detail_ID;
+        }
+
+        let res;
+        try {
+            if (editingId) {
+                res = await fetch(`${API_URL}/${editingId}`, {
+                    method: "PUT",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(data)
+                });
+            } else {
+                res = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(data)
+                });
+            }
+
+            if (res.ok) {
+                loadOrderDetails();
+                bootstrap.Modal.getInstance(modalElement).hide();
+            } else {
+                const errorData = await res.json();
+                alert(`Error al guardar detalle: ${errorData.message || res.statusText}`);
+            }
+        } catch (error) {
+            console.error("Fetch error:", error);
+            alert("Error de conexión al servidor.");
+        }
+    });
+
+    async function deleteOrderDetail(id) {
+        if (!confirm("¿Está seguro de eliminar este detalle de orden?")) return;
+        try {
+            const res = await fetch(`${API_URL}/${id}`, {method: "DELETE"});
+            if (res.ok) loadOrderDetails();
+            else {
+                const errorData = await res.json();
+                alert(`Error al eliminar detalle: ${errorData.error || res.statusText}`);
+            }
+        } catch (error) {
+            console.error("Fetch error:", error);
+            alert("Error de conexión al servidor.");
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadOrderDetails);
+</script>
+</body>
+</html>
